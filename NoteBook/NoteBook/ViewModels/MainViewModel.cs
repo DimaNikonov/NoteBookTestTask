@@ -16,7 +16,6 @@ namespace NoteBook.ViewModels
 {
     class MainViewModel : BindableBase
     {
-        private ObservableCollection<BaseNote> listNotesInDB;
         private string fileName;
         private string textNote;
 
@@ -131,15 +130,23 @@ namespace NoteBook.ViewModels
 
                 if (!this.IsEdited)
                 {
-                    var note = new Note()
+                    var fileName = this.GetFileName();
+                    if (!string.IsNullOrEmpty(fileName))
                     {
-                        File = stream.ToArray(),
-                        Name = this.GetFileName()
-                    };
+                        var note = new Note()
+                        {
+                            File = stream.ToArray(),
+                            Name = fileName
+                        };
 
-                    await dBProvider.SaveToDB(note);
+                        await dBProvider.SaveToDB(note);
 
-                    await this.UpdateUI(dBProvider);
+                        await this.UpdateUI(dBProvider);
+                    }
+                    else
+                    {
+                        MessageBox.Show(Application.Current.MainWindow, "you have not entered a file name", "Attention", MessageBoxButton.OK);
+                    }
                 }
                 else
                 {
@@ -160,7 +167,7 @@ namespace NoteBook.ViewModels
             }
             else
             {
-                MessageBox.Show(Application.Current.MainWindow, "you have not entered a file name", "Attention", MessageBoxButton.OK);
+                MessageBox.Show(Application.Current.MainWindow, "you have not entered a text", "Attention", MessageBoxButton.OK);
             }
         }
 
