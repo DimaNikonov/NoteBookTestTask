@@ -13,46 +13,37 @@ namespace NoteBook.Core
         private NotebookContext context;
         public async Task SaveToDB(Note note)
         {
-            await Task.Run(() =>
+            using (this.context = new NotebookContext())
             {
-                using (this.context = new NotebookContext())
-                {
-                    context.Notes.Add(note);
-                    context.SaveChanges();
-                }
-            });
+                context.Notes.Add(note);
+                await context.SaveChangesAsync();
+            }
         }
 
         public async Task SaveEditedToDB(Note note)
         {
-            await Task.Run(() =>
+            using (this.context = new NotebookContext())
             {
-                using (this.context = new NotebookContext())
-                {
-                    var editedNote =context.Notes.Find(note.Id);
-                    if (editedNote != null)
-                    {
-                        editedNote.Name = note.Name;
-                        editedNote.File = note.File;
-                        context.Entry(editedNote).State = EntityState.Modified;
-                        context.SaveChanges();
+                var editedNote = await context.Notes.FindAsync(note.Id);
 
-                    }
+                if (editedNote != null)
+                {
+                    editedNote.Name = note.Name;
+                    editedNote.File = note.File;
+                    context.Entry(editedNote).State = EntityState.Modified;
+                    await context.SaveChangesAsync();
                 }
-            });
+            }
         }
 
         public async Task<Note> ReadFromDB(int Id)
         {
-            return await Task.Run(() =>
+            Note note;
+            using (this.context = new NotebookContext())
             {
-                 Note note;
-                 using (this.context = new NotebookContext())
-                 {
-                     note = this.context.Notes.FirstOrDefault(x => x.Id == Id);
-                 }
-                 return note;
-            });
+                note = await this.context.Notes.FirstOrDefaultAsync(x => x.Id == Id);
+            }
+            return note;
         }
 
         public async Task<List<BaseNote>> ReadFromDb()

@@ -44,7 +44,7 @@ namespace NoteBook.ViewModels
         }
 
         public ObservableCollection<BaseNote> ListNotesInDB { get; set; }
-       
+
         public ICommand SaveToDbText { get; set; }
 
         public ICommand SaveToDbFile { get; set; }
@@ -87,36 +87,50 @@ namespace NoteBook.ViewModels
 
         private async void ReadFromDbTextExecute()
         {
-            var dBProvider = new DBProvider();
-            var streamProvider = new StreamProvider();
+            if (this.SelectedNote != null)
+            {
+                var dBProvider = new DBProvider();
+                var streamProvider = new StreamProvider();
 
-            var note = await dBProvider.ReadFromDB(this.SelectedNote.Id);
-            var stream = streamProvider.GetUnZipStream(note.File) as MemoryStream;
-            this.TextNote = Encoding.UTF8.GetString(stream.ToArray());
+                var note = await dBProvider.ReadFromDB(this.SelectedNote.Id);
+                var stream = streamProvider.GetUnZipStream(note.File) as MemoryStream;
+                this.TextNote = Encoding.UTF8.GetString(stream.ToArray());
 
-            stream.Close();
-            this.IsEdited = true;
+                stream.Close();
+                this.IsEdited = true;
+            }
+            else
+            {
+                this.ShowMessage(Constants.NoChosenNote);
+            }
         }
 
         private async void ReadFromDbFileExecute()
         {
-            var dBProvider = new DBProvider();
-            var streamProvider = new StreamProvider();
+            if (this.SelectedNote != null)
+            {
+                var dBProvider = new DBProvider();
+                var streamProvider = new StreamProvider();
 
-            var note = await dBProvider.ReadFromDB(this.SelectedNote.Id);
-            var stream = streamProvider.GetUnZipStream(note.File) as MemoryStream;
-            var dialog = new SaveFileDialog()
-            {
-                FileName = note.Name,
-                DefaultExt = Constants.ExtentionTxt,
-                Filter = $"Text documents ({Constants.ExtentionTxt})|*{Constants.ExtentionTxt}"
-            };
-            if (dialog.ShowDialog(Application.Current.MainWindow) == true)
-            {
-                File.WriteAllBytes(dialog.FileName, stream.ToArray());
+                var note = await dBProvider.ReadFromDB(this.SelectedNote.Id);
+                var stream = streamProvider.GetUnZipStream(note.File) as MemoryStream;
+                var dialog = new SaveFileDialog()
+                {
+                    FileName = note.Name,
+                    DefaultExt = Constants.ExtentionTxt,
+                    Filter = $"Text documents ({Constants.ExtentionTxt})|*{Constants.ExtentionTxt}"
+                };
+                if (dialog.ShowDialog(Application.Current.MainWindow) == true)
+                {
+                    File.WriteAllBytes(dialog.FileName, stream.ToArray());
+                }
+
+                stream.Close();
             }
-
-            stream.Close();
+            else
+            {
+                this.ShowMessage(Constants.NoChosenNote);
+            }
         }
 
         private async void SaveToDbTextExecute()
@@ -145,7 +159,7 @@ namespace NoteBook.ViewModels
                     }
                     else
                     {
-                        MessageBox.Show(Application.Current.MainWindow, "you have not entered a file name", "Attention", MessageBoxButton.OK);
+                        this.ShowMessage(Constants.NoFileName);
                     }
                 }
                 else
@@ -167,7 +181,7 @@ namespace NoteBook.ViewModels
             }
             else
             {
-                MessageBox.Show(Application.Current.MainWindow, "you have not entered a text", "Attention", MessageBoxButton.OK);
+                this.ShowMessage(Constants.NoText); 
             }
         }
 
@@ -178,23 +192,31 @@ namespace NoteBook.ViewModels
                 var dBProvider = new DBProvider();
                 var streamProvider = new StreamProvider();
 
-                var stream = streamProvider.GetZipStream(this.OpenFileFialog(out string fileName)) as MemoryStream;
+                var streamFromFile= this.OpenFileFialog(out string fileName);
 
-                Note note = new Note()
+                if (!string.IsNullOrEmpty(fileName)&&streamFromFile!=null)
                 {
-                    File = stream.ToArray(),
-                    Name = fileName
-                };
+                    var stream = streamProvider.GetZipStream(streamFromFile) as MemoryStream;
 
-                await dBProvider.SaveToDB(note);
+                    Note note = new Note()
+                    {
+                        File = stream.ToArray(),
+                        Name = fileName
+                    };
 
-                await this.UpdateUI(dBProvider);
+                    await dBProvider.SaveToDB(note);
+
+                    await this.UpdateUI(dBProvider);
+                }
+                else
+                {
+                    this.ShowMessage(Constants.NoChoseFile);
+                }
             }
             else
             {
-                MessageBox.Show(Application.Current.MainWindow, "You did not save the edited file", "Attention", MessageBoxButton.OK);
+                this.ShowMessage(Constants.NotSaveEditedFile);
             }
-
         }
 
         private string GetFileName()
@@ -238,6 +260,11 @@ namespace NoteBook.ViewModels
             {
                 this.ListNotesInDB.Add(item);
             }
+        }
+
+        private void ShowMessage(string message)
+        {
+            MessageBox.Show(Application.Current.MainWindow, message, "Attention", MessageBoxButton.OK);
         }
     }
 }
